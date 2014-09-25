@@ -172,6 +172,7 @@
 %type <stmt>   iteration_statement
 %type <stmt>   loop_body
 %type <setex>  loop_initialization
+%type <list>   loop_initialization_list
 %type <setex>  loop_condition
 %type <value>  loop_stride
 %type <symbol> idparent
@@ -420,7 +421,7 @@ selection_statement:
 
 
 iteration_statement:
-    FOR '(' loop_initialization loop_condition loop_stride ')'
+    FOR '(' loop_initialization_list loop_condition loop_stride ')'
     {
       osl_vector_p   iterator_term;
       osl_relation_p iterator_relation;
@@ -434,7 +435,7 @@ iteration_statement:
       if (($5 == 0) ||
 	  (($5 > 0) && (parser_min || parser_floord)) ||
           (($5 < 0) && (parser_max || parser_ceild))) {
-	osl_relation_free($3);
+	osl_relation_list_free($3);
         osl_relation_free($4);
         if ($5 == 0)
 	  yyerror("unsupported zero loop stride");
@@ -456,9 +457,9 @@ iteration_statement:
                      &iterator_term->v[parser_loop_depth], 1); 
       iterator_relation = osl_relation_from_vector(iterator_term);
       if ($5 > 0)
-	init_constraints = clan_relation_greater(iterator_relation, $3, 0);
+	init_constraints = clan_relation_greater(iterator_relation, $3->elt, 0);
       else
-	init_constraints = clan_relation_greater($3, iterator_relation, 0);
+	init_constraints = clan_relation_greater($3->elt, iterator_relation, 0);
       osl_vector_free(iterator_term);
       osl_relation_free(iterator_relation);
 
@@ -480,7 +481,7 @@ iteration_statement:
       }
       
       osl_relation_free(init_constraints);
-      osl_relation_free($3);
+      osl_relation_list_free($3);
       osl_relation_free($4);
       parser_scattering[2*parser_loop_depth-1] = ($5 > 0) ? 1 : -1;
       parser_scattering[2*parser_loop_depth] = 0;
@@ -529,6 +530,22 @@ iteration_statement:
   ;
 
 
+loop_initialization_list:
+    loop_initialization ',' loop_initialization_list
+    {
+      osl_relation_list_p new = osl_relation_list_malloc();
+      new->elt = $1;
+      osl_relation_list_push(&$3, new);
+      $$ = $3;
+    }
+  | loop_initialization ';'
+    {
+      $$ = osl_relation_list_malloc();
+      $$->elt = $1;
+    }
+  ;
+
+
 loop_initialization:
     loop_declaration ID
     {
@@ -536,7 +553,7 @@ loop_initialization:
 	                            parser_loop_depth))
 	YYABORT;
     }
-    '=' affine_minmax_expression ';'
+    '=' affine_minmax_expression
     {
       CLAN_debug("rule lower_bound.1: ID = max_affex ;");
       free($2);
@@ -544,7 +561,6 @@ loop_initialization:
       CLAN_debug_call(osl_relation_dump(stderr, $$));
     }
   ;
-
 
 loop_declaration:
     INT
