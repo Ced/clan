@@ -435,7 +435,7 @@ iteration_statement:
       if (($5 == 0) ||
 	  (($5 > 0) && (parser_min || parser_floord)) ||
           (($5 < 0) && (parser_max || parser_ceild))) {
-	osl_relation_list_free($3);
+	//osl_relation_list_free($3);
         osl_relation_free($4);
         if ($5 == 0)
 	  yyerror("unsupported zero loop stride");
@@ -482,6 +482,7 @@ iteration_statement:
       
       osl_relation_free(init_constraints);
       osl_relation_list_free($3);
+      $3 = NULL; // To avoid a conflict with the destructor TODO: avoid that
       osl_relation_free($4);
       parser_scattering[2*parser_loop_depth-1] = ($5 > 0) ? 1 : -1;
       parser_scattering[2*parser_loop_depth] = 0;
