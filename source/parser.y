@@ -431,7 +431,15 @@ iteration_statement:
     {
       CLAN_debug("rule iteration_statement.1.1: for ( init cond stride ) ...");
       clan_parser_increment_loop_depth();
-      
+     
+      // Check there is only one element in each list
+      if ((osl_relation_list_count($3) != 1) ||
+          (osl_relation_list_count($4) != 1) ||
+          (parser_xfor_index != 1)) {
+	yyerror("unsupported element list in a for loop");
+        YYABORT;
+      }
+
       // Check the stride and the initialization are correct.
       if (($5[0] == 0) ||
 	  (($5[0] > 0) && parser_min[0])    ||
@@ -456,6 +464,7 @@ iteration_statement:
       // Add the constraints contributed by the loop to the domain stack.
       clan_parser_loop_contribution($3->elt, $4->elt, $5[0]);
 
+      parser_xfor_index = 0;
       osl_relation_list_free($3);
       osl_relation_list_free($4);
       $3 = NULL; // To avoid conflicts with the destructor TODO: avoid that.
@@ -590,7 +599,7 @@ loop_stride_list:
     }
   | loop_stride
     {
-      //parser_xfor_index = 0;
+      parser_xfor_index++;
       $$ = malloc(sizeof(int));
       $$[0] = $1;
     }
