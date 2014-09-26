@@ -1922,11 +1922,11 @@ void clan_parser_state_malloc(int precision) {
   CLAN_malloc(parser_nb_local_dims, int*, depth * sizeof(int));
   CLAN_malloc(parser_valid_else, int*, depth * sizeof(int));
   CLAN_malloc(parser_scattering, int*, (2 * depth + 1) * sizeof(int));
-  CLAN_malloc(parser_iterators, clan_symbol_p*, depth* sizeof(clan_symbol_p));
-  CLAN_malloc(parser_ceild,  int*, CLAN_MAX_XFOR_INDICES);
-  CLAN_malloc(parser_floord, int*, CLAN_MAX_XFOR_INDICES);
-  CLAN_malloc(parser_min,    int*, CLAN_MAX_XFOR_INDICES);
-  CLAN_malloc(parser_max,    int*, CLAN_MAX_XFOR_INDICES);
+  CLAN_malloc(parser_iterators, clan_symbol_p*, depth * sizeof(clan_symbol_p));
+  CLAN_malloc(parser_ceild,  int*, CLAN_MAX_XFOR_INDICES * sizeof(int));
+  CLAN_malloc(parser_floord, int*, CLAN_MAX_XFOR_INDICES * sizeof(int));
+  CLAN_malloc(parser_min,    int*, CLAN_MAX_XFOR_INDICES * sizeof(int));
+  CLAN_malloc(parser_max,    int*, CLAN_MAX_XFOR_INDICES * sizeof(int));
 }
 
 
