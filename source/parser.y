@@ -427,22 +427,22 @@ selection_statement:
 
 
 iteration_statement:
-    FOR '(' loop_initialization_list loop_condition_list loop_stride ')'
+    FOR '(' loop_initialization_list loop_condition_list loop_stride_list ')'
     {
       CLAN_debug("rule iteration_statement.1.1: for ( init cond stride ) ...");
       clan_parser_increment_loop_depth();
       
       // Check the stride and the initialization are correct.
-      if (($5 == 0) ||
-	  (($5 > 0) && parser_min[0])    ||
-	  (($5 > 0) && parser_floord[0]) ||
-	  (($5 < 0) && parser_max[0])    ||
-          (($5 < 0) && parser_ceild[0])) {
+      if (($5[0] == 0) ||
+	  (($5[0] > 0) && parser_min[0])    ||
+	  (($5[0] > 0) && parser_floord[0]) ||
+	  (($5[0] < 0) && parser_max[0])    ||
+          (($5[0] < 0) && parser_ceild[0])) {
 	osl_relation_list_free($3);
         osl_relation_list_free($4);
-        if ($5 == 0)
+        if ($5[0] == 0)
 	  yyerror("unsupported zero loop stride");
-	else if ($5 > 0)
+	else if ($5[0] > 0)
 	  yyerror("illegal min or floord in forward loop initialization");
         else
 	  yyerror("illegal max or ceild in backward loop initialization");
@@ -454,13 +454,13 @@ iteration_statement:
       parser_max[0]    = 0;
 
       // Add the constraints contributed by the loop to the domain stack.
-      clan_parser_loop_contribution($3->elt, $4->elt, $5);
+      clan_parser_loop_contribution($3->elt, $4->elt, $5[0]);
 
       osl_relation_list_free($3);
       osl_relation_list_free($4);
       $3 = NULL; // To avoid conflicts with the destructor TODO: avoid that.
       $4 = NULL;
-      parser_scattering[2*parser_loop_depth-1] = ($5 > 0) ? 1 : -1;
+      parser_scattering[2*parser_loop_depth-1] = ($5[0] > 0) ? 1 : -1;
       parser_scattering[2*parser_loop_depth] = 0;
     }
     loop_body
@@ -541,6 +541,7 @@ loop_initialization:
     }
   ;
 
+
 loop_declaration:
     INT
   |
@@ -585,7 +586,7 @@ loop_stride_list:
         $$[i] = $3[i];
       $$[parser_xfor_index] = $1;
     }
-  | loop_stride ';'
+  | loop_stride
     {
       //parser_xfor_index = 0;
       $$ = malloc(sizeof(int));
@@ -1983,6 +1984,7 @@ void clan_parser_state_initialize(clan_options_p options) {
   for (i = 0; i < CLAN_MAX_DEPTH; i++) {
     parser_nb_local_dims[i] = 0;
     parser_valid_else[i] = 0;
+    parser_iterators[i] = NULL;
   }
 
   for (i = 0; i < 2 * CLAN_MAX_DEPTH + 1; i++)

@@ -288,6 +288,28 @@ int clan_symbol_generate_new_key(clan_symbol_p table) {
 
 
 /**
+ * clan_symbol_push_at_end function
+ * this function adds a symbol at the end of the symbol table whose address
+ * is provided as a parameter. If the symbol table is empty (NULL), the new
+ * node will become its first element.
+ * \param[in,out] table  The address of the symbol table.
+ * \param[in]     symbol The symbol to add to the table.
+ */
+void clan_symbol_push_at_end(clan_symbol_p* table, clan_symbol_p symbol) {
+  clan_symbol_p tmp = *table;
+
+  // We put the symbol at the end of the table.
+  if (*table == NULL) {
+    *table = symbol;
+  } else {
+    while (tmp->next != NULL)
+      tmp = tmp->next;
+    tmp->next = symbol;
+  }
+}
+
+
+/**
  * clan_symbol_add function:
  * This function adds a new clan_symbol_t in the symbol table whose address
  * is provided as a parameter. If the symbol table is empty (NULL), the new
@@ -300,7 +322,7 @@ int clan_symbol_generate_new_key(clan_symbol_p table) {
  */
 clan_symbol_p clan_symbol_add(clan_symbol_p* table, char* identifier,
                               int type) {
-  clan_symbol_p symbol, tmp = *table;
+  clan_symbol_p symbol;
 
   // If the identifier is already in the table, do nothing.
   symbol = clan_symbol_lookup(*table, identifier);
@@ -314,13 +336,7 @@ clan_symbol_p clan_symbol_add(clan_symbol_p* table, char* identifier,
   symbol->type = type;
 
   // We put the new symbol at the end of the table.
-  if (*table == NULL) {
-    *table = symbol;
-  } else {
-    while (tmp->next != NULL)
-      tmp = tmp->next;
-    tmp->next = symbol;
-  }
+  clan_symbol_push_at_end(table, symbol);
 
   return symbol;
 }
@@ -555,7 +571,7 @@ int clan_symbol_new_iterator(clan_symbol_p* table, clan_symbol_p* array,
   if (symbol->rank != depth + 1)
     symbol->rank = depth + 1;
 
-  array[depth] = clan_symbol_clone_one(symbol);
+  clan_symbol_push_at_end(&array[depth], clan_symbol_clone_one(symbol));
   return 1;
 }
 
