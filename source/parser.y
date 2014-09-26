@@ -462,6 +462,7 @@ iteration_statement:
       $4 = NULL;
       parser_scattering[2*parser_loop_depth-1] = ($5[0] > 0) ? 1 : -1;
       parser_scattering[2*parser_loop_depth] = 0;
+      free($5);
     }
     loop_body
     {
@@ -584,6 +585,7 @@ loop_stride_list:
       $$ = malloc((parser_xfor_index + 1) * sizeof(int));
       for (i = 0; i < parser_xfor_index; i++)
         $$[i] = $3[i];
+      free($3);
       $$[parser_xfor_index] = $1;
     }
   | loop_stride
@@ -630,6 +632,7 @@ loop_body:
       CLAN_debug("rule loop_body.1: <stmt>");
       parser_loop_depth--;
       clan_symbol_free(parser_iterators[parser_loop_depth]);
+      parser_iterators[parser_loop_depth] = NULL;
       clan_domain_drop(&parser_stack);
       $$ = $1;
       parser_scattering[2*parser_loop_depth]++;
