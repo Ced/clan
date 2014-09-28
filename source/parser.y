@@ -363,7 +363,11 @@ labeled_statement:
       osl_relation_list_p labeled_constraints;
 
       CLAN_debug("labeled_statement.1.1: <int> : ...");
-      
+     
+      if (parser_stack == NULL)
+        printf("NULL stack, label %d\n", $1);
+      if (parser_stack->constraints == NULL)
+        printf("NULL constraints\n");
       if (($1 < 0) ||
 	  ($1 >= clan_relation_list_nb_elements(parser_stack->constraints))) {
 	yyerror("label out of range");
@@ -505,6 +509,7 @@ iteration_statement:
       }
 
       // Add the constraints contributed by the xfor loop to the domain stack.
+      clan_domain_dup(&parser_stack);
       clan_domain_xfor(parser_stack, parser_loop_depth, parser_symbol,
 	               $3, $4, $5, parser_options);
 
@@ -547,6 +552,7 @@ iteration_statement:
         YYABORT;
 
       // Add the constraints contributed by the for loop to the domain stack.
+      clan_domain_dup(&parser_stack);
       clan_domain_for(parser_stack, parser_loop_depth, parser_symbol,
 	              $3->elt, $4->elt, $5[0], parser_options);
 
@@ -1662,7 +1668,7 @@ expression_statement:
       osl_body_p body;
       osl_generic_p gen;
       
-      if (!CLAN_DEBUG) {
+      if (CLAN_DEBUG) {
 	int i;
 	printf("xfor management data:\n");
 	printf("index | depth | label\n");

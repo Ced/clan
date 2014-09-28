@@ -344,7 +344,6 @@ void clan_domain_for(clan_domain_p domain,
   osl_relation_free(iterator_relation);
 
   // Add the contribution of the initialization to the current domain.
-  clan_domain_dup(&domain);
   clan_domain_and(domain, init_constraints);
 
   // Add the contribution of the condition to the current domain.
