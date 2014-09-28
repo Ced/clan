@@ -113,14 +113,14 @@
    int            parser_indent;        /**< SCoP indentation */
    int            parser_error;         /**< Boolean: parse error */
 
+   int            parser_xfor_nb_nests; /**< Current number of xfor nests */
+   int*           parser_xfor_depths;   /**< Current xfor nest depth list */
+   int*           parser_xfor_labels;   /**< Current xfor label list */
    int            parser_xfor_index;    /**< Nb of current (x)for loop index */
    int*           parser_ceild;         /**< Booleans: ith index used ceild */
    int*           parser_floord;        /**< Booleans: ith index used floord */
    int*           parser_min;           /**< Booleans: ith index used min */
    int*           parser_max;           /**< Booleans: ith index used max */
-
-   int            parser_nb_labels;     /**< Nb of xfor labels */
-   int*           parser_labels;        /**< Current xfor label list */
 
    // Autoscop-relative variables.
    int            parser_autoscop;      /**< Boolean: autoscop in progress */
@@ -379,13 +379,15 @@ labeled_statement:
 	  osl_relation_clone(labeled_constraints->elt);
 
       clan_domain_push(&parser_stack, labeled_domain);
-      parser_labels[parser_nb_labels] = $1;
-      parser_nb_labels++;
+      parser_xfor_labels[parser_xfor_nb_nests] = $1;
+      parser_xfor_depths[parser_xfor_nb_nests + 1] = 0;
+      parser_xfor_nb_nests++;
     }
     statement
     {
       clan_domain_drop(&parser_stack);
-      parser_nb_labels--;
+      parser_xfor_nb_nests--;
+      parser_xfor_labels[parser_xfor_nb_nests] = CLAN_UNDEFINED;
       $$ = $4;
       CLAN_debug("labeled_statement.1.2: ... <stmt>");
     }
@@ -472,8 +474,9 @@ iteration_statement:
     XFOR '(' loop_initialization_list loop_condition_list loop_stride_list ')'
     {
       CLAN_debug("rule iteration_statement.1.1: xfor ( init cond stride ) ...");
+      parser_xfor_labels[parser_loop_depth] = CLAN_UNDEFINED;
       clan_parser_increment_loop_depth();
-      
+       
       if (CLAN_DEBUG) {
 	int i;
 	printf("Loop initialization part sanity sentinels:\n");
@@ -505,6 +508,7 @@ iteration_statement:
       clan_domain_xfor(parser_stack, parser_loop_depth, parser_symbol,
 	               $3, $4, $5, parser_options);
 
+      parser_xfor_depths[parser_xfor_nb_nests]++;
       parser_xfor_index = 0;
       osl_relation_list_free($3);
       osl_relation_list_free($4);
@@ -518,6 +522,7 @@ iteration_statement:
     {
       CLAN_debug("rule iteration_statement.1.2: xfor ( init cond stride ) "
 	         "body");
+      parser_xfor_depths[parser_xfor_nb_nests]--;
       $$ = $8;
       CLAN_debug_call(osl_statement_dump(stderr, $$));
     }
@@ -525,6 +530,7 @@ iteration_statement:
     FOR '(' loop_initialization_list loop_condition_list loop_stride_list ')'
     {
       CLAN_debug("rule iteration_statement.2.1: for ( init cond stride ) ...");
+      parser_xfor_labels[parser_loop_depth] = 0;
       clan_parser_increment_loop_depth();
      
       // Check there is only one element in each list
@@ -570,6 +576,7 @@ iteration_statement:
 	                            "clan_infinite_loop", parser_loop_depth))
 	YYABORT;
 
+      parser_xfor_labels[parser_loop_depth] = 0;
       clan_parser_increment_loop_depth();
       
       // Generate the constraint clan_infinite_loop >= 0.
@@ -1655,6 +1662,16 @@ expression_statement:
       osl_body_p body;
       osl_generic_p gen;
       
+      if (!CLAN_DEBUG) {
+	int i;
+	printf("xfor management data:\n");
+	printf("index | depth | label\n");
+	for (i = 0; i < parser_xfor_nb_nests; i++) {
+	  printf("  [%d] |     %d |     %d\n",
+	         i, parser_xfor_depths[i], parser_xfor_labels[i]);
+	}
+      }
+ 
       CLAN_debug("rule expression_statement.2: expression ;");
       statement = osl_statement_malloc();
 
@@ -1678,7 +1695,7 @@ expression_statement:
       // - 4. Body.
       body = osl_body_malloc();
       body->iterators = clan_symbol_array_to_strings(parser_iterators,
-	  parser_loop_depth, parser_labels);
+	  parser_loop_depth, parser_xfor_depths, parser_xfor_labels);
       body->expression = osl_strings_encapsulate(parser_record);
       gen = osl_generic_shell(body, osl_body_interface());
       osl_generic_add(&statement->extension, gen);
@@ -2027,7 +2044,8 @@ void clan_parser_state_malloc(int precision) {
   CLAN_malloc(parser_floord, int*, CLAN_MAX_XFOR_INDICES * sizeof(int));
   CLAN_malloc(parser_min,    int*, CLAN_MAX_XFOR_INDICES * sizeof(int));
   CLAN_malloc(parser_max,    int*, CLAN_MAX_XFOR_INDICES * sizeof(int));
-  CLAN_malloc(parser_labels, int*, CLAN_MAX_DEPTH * sizeof(int));
+  CLAN_malloc(parser_xfor_depths, int*, CLAN_MAX_DEPTH * sizeof(int));
+  CLAN_malloc(parser_xfor_labels, int*, CLAN_MAX_DEPTH * sizeof(int));
 }
 
 
@@ -2046,7 +2064,8 @@ void clan_parser_state_free() {
   free(parser_floord);
   free(parser_min);
   free(parser_max);
-  free(parser_labels);
+  free(parser_xfor_depths);
+  free(parser_xfor_labels);
   clan_domain_drop(&parser_stack);
 }
 
@@ -2065,6 +2084,7 @@ void clan_parser_state_initialize(clan_options_p options) {
   parser_recording     = CLAN_FALSE;
   parser_record        = NULL;
   parser_if_depth      = 0;
+  parser_xfor_nb_nests = 0;
   parser_xfor_index    = 0;
   parser_indent        = CLAN_UNDEFINED;
   parser_error         = CLAN_FALSE;
@@ -2074,7 +2094,6 @@ void clan_parser_state_initialize(clan_options_p options) {
   parser_column_start  = 1;
   parser_column_end    = 1;
   parser_nb_parameters = 0;
-  parser_nb_labels     = 0;
 
   for (i = 0; i < CLAN_MAX_XFOR_INDICES; i++) {
     parser_ceild[i]  = 0;
@@ -2087,7 +2106,8 @@ void clan_parser_state_initialize(clan_options_p options) {
     parser_nb_local_dims[i] = 0;
     parser_valid_else[i] = 0;
     parser_iterators[i] = NULL;
-    parser_labels[i] = 0;
+    parser_xfor_depths[i] = 0;
+    parser_xfor_labels[i] = CLAN_UNDEFINED;
   }
 
   for (i = 0; i < 2 * CLAN_MAX_DEPTH + 1; i++)

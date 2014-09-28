@@ -86,15 +86,16 @@ void                clan_symbol_push_at_end(clan_symbol_p*, clan_symbol_p);
 clan_symbol_p       clan_symbol_add(clan_symbol_p*, char*, int);
 int                 clan_symbol_get_rank(clan_symbol_p, char*);
 int                 clan_symbol_get_type(clan_symbol_p, char*);
-struct osl_strings* clan_symbol_array_to_strings(clan_symbol_p*, int, int*);
+struct osl_strings* clan_symbol_array_to_strings(clan_symbol_p*,
+                                int, int*, int*);
 int                 clan_symbol_nb_of_type(clan_symbol_p, int);
 struct osl_generic* clan_symbol_to_strings(clan_symbol_p, int);
 clan_symbol_p       clan_symbol_clone_one(clan_symbol_p);
 struct osl_generic* clan_symbol_to_arrays(clan_symbol_p);
 int                 clan_symbol_new_iterator(clan_symbol_p*, clan_symbol_p*,
-                                             char*, int); 
+                                char*, int); 
 int                 clan_symbol_update_type(clan_symbol_p,
-                                            struct osl_relation_list*, int);
+                                struct osl_relation_list*, int);
 
 # if defined(__cplusplus)
   }
