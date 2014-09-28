@@ -39,6 +39,9 @@
 #ifndef CLAN_DOMAIN_H
 # define CLAN_DOMAIN_H
 
+# include <clan/symbol.h>
+# include <clan/options.h>
+
 # if defined(__cplusplus)
 extern "C"
   {
@@ -85,7 +88,12 @@ void          clan_domain_dup(clan_domain_p*);
 void          clan_domain_drop(clan_domain_p*);
 void          clan_domain_and(clan_domain_p, struct osl_relation*);
 void          clan_domain_stride(clan_domain_p, int, int);
-
+void          clan_domain_for(clan_domain_p, int, clan_symbol_p,
+                          struct osl_relation*, struct osl_relation*,
+                          int, clan_options_p);
+void          clan_domain_xfor(clan_domain_p, int, clan_symbol_p,
+                          struct osl_relation_list*, struct osl_relation_list*,
+		          int*, clan_options_p);
 
 # if defined(__cplusplus)
   }

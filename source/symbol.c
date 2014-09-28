@@ -410,15 +410,26 @@ int clan_symbol_get_type(clan_symbol_p symbol, char* identifier) {
  * in the symbol array.
  * \param[in] sarray The symbol array.
  * \param[in] size   The size of the symbol array.
+ * \param[in] labels The labels (i.e., the symbol version) of each xfor loop.
  * \return An osl_strings_t containing all the symbol strings.
  */
-osl_strings_p clan_symbol_array_to_strings(clan_symbol_p* sarray, int size) {
-  int i;
+osl_strings_p clan_symbol_array_to_strings(clan_symbol_p* sarray, int size,
+                                           int* labels) {
+  int i, j, label_index = 0;
+  clan_symbol_p symbol;
   osl_strings_p strings = osl_strings_malloc();
 
   // Fill the array of strings.
   for (i = 0; i < size; i++) {
-    osl_strings_add(strings, sarray[i]->identifier);
+    symbol = sarray[i];
+    // If symbol has a non-NULL next field, it means it corresponds to
+    // an xfor index that we can select thanks to the xfor label. 
+    if (symbol->next != NULL) {
+      for (j = 0; j < labels[label_index]; j++)
+        symbol = symbol->next;
+      label_index++;
+    }
+    osl_strings_add(strings, symbol->identifier);
   }
 
   return strings;
