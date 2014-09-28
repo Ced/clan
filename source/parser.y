@@ -81,6 +81,7 @@
    int  clan_parser_nb_ld();
    void clan_parser_log(char*);
    void clan_parser_increment_loop_depth();
+   void clan_parser_state_print(FILE*);
    int  clan_parser_is_loop_sane(osl_relation_list_p,osl_relation_list_p,int*);
    void clan_parser_state_initialize(clan_options_p);
    osl_scop_p clan_parse(FILE*, clan_options_p);
@@ -481,17 +482,6 @@ iteration_statement:
       parser_xfor_labels[parser_loop_depth] = CLAN_UNDEFINED;
       clan_parser_increment_loop_depth();
        
-      if (CLAN_DEBUG) {
-	int i;
-	printf("Loop initialization part sanity sentinels:\n");
-	printf("index | min | max | floord | ceild\n");
-	for (i = 0; i < parser_xfor_index; i++) {
-	  printf("  [%d] |   %d |   %d |      %d |     %d\n",
-	         i, parser_min[i], parser_max[i],
-		 parser_floord[i], parser_ceild[i]);
-	}
-      }
-
       // Check loop bounds and stride consistency and reset sanity sentinels.
       if (!clan_parser_is_loop_sane($3, $4, $5))
         YYABORT;
@@ -1668,16 +1658,6 @@ expression_statement:
       osl_body_p body;
       osl_generic_p gen;
       
-      if (CLAN_DEBUG) {
-	int i;
-	printf("xfor management data:\n");
-	printf("index | depth | label\n");
-	for (i = 0; i < parser_xfor_nb_nests; i++) {
-	  printf("  [%d] |     %d |     %d\n",
-	         i, parser_xfor_depths[i], parser_xfor_labels[i]);
-	}
-      }
- 
       CLAN_debug("rule expression_statement.2: expression ;");
       statement = osl_statement_malloc();
 
@@ -1953,6 +1933,160 @@ void yyerror(char *s) {
     }
   }
   parser_error = CLAN_TRUE;
+}
+
+
+/**
+ * clan_parser_state_print function:
+ * this function "pretty" prints the parser state to a file.
+ */
+void clan_parser_state_print(FILE* file) {
+  int i;
+
+  fprintf(file, "+-- clan parser state\n");
+  fprintf(file, "|\t|\n");
+
+  // SCoP.
+  fprintf(file, "|\tparser_scop [SCoP in construction]\n");
+  fprintf(file, "|\t|\t|\n");
+  osl_scop_idump(file, parser_scop, 2);
+  fprintf(file, "|\t|\n");
+
+  // Symbol table.
+  fprintf(file, "|\tparser_symbol [Symbol table]\n");
+  fprintf(file, "|\t|\t|\n");
+  clan_symbol_print_structure(file, parser_symbol, 2);
+  fprintf(file, "|\t|\n");
+
+  // Recording boolean.
+  fprintf(file, "|\tparser_recording [Boolean: do we record or not?] = %d\n",
+          parser_recording);
+  fprintf(file, "|\t|\n");
+
+  // Recorded body.
+  fprintf(file, "|\tparser_record [Statement body] = ");
+  if (parser_record == NULL)
+    fprintf(file, "(NULL)\n");
+  else
+    fprintf(file, "%s\n", parser_record);
+  fprintf(file, "|\t|\n");
+
+  // Loop depth.
+  fprintf(file, "|\tparser_loop_depth [Current loop depth] = %d\n",
+          parser_loop_depth);
+  fprintf(file, "|\t|\n");
+
+  // If depth.
+  fprintf(file, "|\tparser_if_depth [Current if depth] = %d\n",
+          parser_if_depth);
+  fprintf(file, "|\t|\n");
+
+  // Scattering.
+  fprintf(file, "|\tparser_scattering [Current statement scattering]\n");
+  fprintf(file, "|\t|\t|\n");
+  fprintf(file, "|\t|\t+-- ");
+  for (i = 0; i < 2 * parser_loop_depth + 1; i++)
+    printf("%d ", parser_scattering[i]);
+  fprintf(file, "\n");
+  fprintf(file, "|\t|\t|\n");
+  fprintf(file, "|\t|\n");
+
+  // Iterators.
+  fprintf(file, "|\tparser_iterators [Current iterator list]\n");
+  fprintf(file, "|\t|\t|\n");
+  if (parser_loop_depth > 0) {
+    for (i = 0; i < parser_loop_depth; i++) {
+      fprintf(file, "|\t|\tparser_iterators[%d]\n", i);
+      fprintf(file, "|\t|\t|\t|\n");
+      clan_symbol_print_structure(file, parser_iterators[i], 3);
+      if (i == parser_loop_depth - 1)
+	fprintf(file, "|\t|\t|\n");
+    }
+  } else {
+    fprintf(file, "|\t|\t+-- (none)\n");
+    fprintf(file, "|\t|\t|\n");
+  }
+  fprintf(file, "|\t|\n");
+
+  // Iteration domain stack.
+  fprintf(file, "|\tparser_domain [Iteration domain stack]\n");
+  fprintf(file, "|\t|\t|\n");
+  clan_domain_idump(file, parser_stack, 2);
+  fprintf(file, "|\t|\n");
+
+  // Number of local dimensions per depth.
+  fprintf(file, "|\tparser_nb_local_dims [Nb of local dims per depth]\n");
+  fprintf(file, "|\t|\t|\n");
+  fprintf(file, "|\t|\t+-- ");
+  if (parser_loop_depth > 0) {
+    for (i = 0; i < parser_loop_depth; i++)
+      printf("%d ", parser_nb_local_dims[i]);
+      fprintf(file, "\n");
+    } else {
+    fprintf(file, "(none)\n");
+  }
+  fprintf(file, "|\t|\t|\n");
+  fprintf(file, "|\t|\n");
+
+  // Number of parameters.
+  fprintf(file, "|\tparser_nb_parameters [Nb of parameter symbols] = %d\n",
+          parser_nb_parameters);
+  fprintf(file, "|\t|\n");
+
+  // Boolean valid else per if depth.
+  fprintf(file, "|\tparser_valid_else [Boolean: OK for else per depth]\n");
+  fprintf(file, "|\t|\t|\n");
+  fprintf(file, "|\t|\t+-- ");
+  if (parser_if_depth > 0) {
+    for (i = 0; i < parser_if_depth; i++)
+      printf("%d ", parser_valid_else[i]);
+    fprintf(file, "\n");
+  } else {
+    fprintf(file, "(none)\n");
+  }
+  fprintf(file, "|\t|\t|\n");
+  fprintf(file, "|\t|\n");
+
+  // Indentation.
+  fprintf(file, "|\tparser_indent [SCoP indentation] = %d\n", parser_indent);
+  fprintf(file, "|\t|\n");
+
+  // Parse error boolean.
+  fprintf(file, "|\tparser_error [Boolean: parse error] = %d\n", parser_error);
+  fprintf(file, "|\t|\n");
+
+  // xfor number of nests, depths and labels.
+  fprintf(file, "|\txfor management [nb of nests, depths and labels]\n");
+  fprintf(file, "|\t|\t|\n");
+  if (parser_xfor_nb_nests > 0) {
+    fprintf(file, "|\t|\t|  nest | depth | label\n");
+    for (i = 0; i < parser_xfor_nb_nests; i++) {
+      printf("|\t|\t|   [%d] |     %d |     %d\n",
+	     i, parser_xfor_depths[i], parser_xfor_labels[i]);
+    }
+  } else {
+    fprintf(file, "|\t|\t|  (no xfor loop)\n");
+  }
+  fprintf(file, "|\t|\t|\n");
+  fprintf(file, "|\t|\n");
+  
+  // loop sanity sentinels
+  fprintf(file, "|\tloop sanity sentinels [booleans min/max/floord/ceild]\n");
+  fprintf(file, "|\t|\t|\n");
+  if (parser_xfor_index > 0) {
+    fprintf(file, "|\t|\t|  index | min | max | floord | ceild\n");
+    for (i = 0; i < parser_xfor_index; i++) {
+      printf("|\t|\t|  [%d] |   %d |   %d |      %d |     %d\n",
+	     i, parser_min[i], parser_max[i],
+	     parser_floord[i], parser_ceild[i]);
+    }
+  } else {
+    fprintf(file, "|\t|\t|  (no (x)for loop indices)\n");
+  }
+  fprintf(file, "|\t|\t|\n");
+  fprintf(file, "|\t|\n");
+  
+  fprintf(file, "|\n");
 }
 
 
