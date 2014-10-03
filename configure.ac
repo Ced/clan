@@ -188,17 +188,31 @@ build)
     OSL_CFLAGS="-I$osl_srcdir/include -I$with_osl_builddir/include"
     OSL_LIBS="$with_osl_builddir/libosl.la"
     OSL_LDFLAGS="-L$with_osl_builddir"
-    AC_CHECK_HEADER(osl.h, [], [AC_MSG_ERROR("Can't find osl headers.")])
+    dnl ----- Check the headers (without polluting CPPFLAGS)
+    save_CPPFLAGS=$CPPFLAGS
+    CPPFLAGS="$CPPFLAGS $OSL_CFLAGS"
+    AC_CHECK_HEADER(osl/osl.h, [], [AC_MSG_ERROR("Can't find osl headers.")])
+    CPPFLAGS=$save_CPPFLAGS
     ;;
 system)
     if test "x$with_osl_prefix" != "x"; then
 	OSL_CFLAGS="-I$with_osl_prefix/include"
+	OSL_LDFLAGS="-L$with_osl_exec_prefix/lib"
     fi
     if test "x$with_osl_exec_prefix" != "x"; then
 	OSL_LDFLAGS="-L$with_osl_exec_prefix/lib"
     fi
     OSL_LIBS="-losl"
-    PKG_CHECK_MODULES([OSL], [osl])
+    dnl ----- Check the headers (without polluting CPPFLAGS)
+    save_CPPFLAGS=$CPPFLAGS
+    CPPFLAGS="$CPPFLAGS $OSL_CFLAGS"
+    AC_CHECK_HEADER(osl/osl.h, [], [AC_MSG_ERROR("Can't find osl headers.")])
+    CPPFLAGS=$save_CPPFLAGS
+    dnl ----- Check the library (without polluting LDFLAGS)
+    save_LDFLAGS=$LDFLAGS
+    LDFLAGS="$LDFLAGS $OSL_LDFLAGS"
+    AC_CHECK_LIB(osl, osl_scop_malloc, [], [AC_MSG_ERROR("Can't find osl library.")])
+    LDFLAGS=$save_LDFLAGS
     ;;
 esac
 
