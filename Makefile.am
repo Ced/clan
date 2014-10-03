@@ -46,7 +46,9 @@ if BUNDLED_OSL
     OSL_LA = $(top_builddir)/osl/libosl.la
 endif
 
-AUTOMAKE_OPTIONS = subdir-objects # then: BUILT_SOURCES = source/parser.h
+CLAN_INCLUDES = -I. -I$(top_builddir)/include -I$(top_srcdir)/include
+
+AUTOMAKE_OPTIONS = subdir-objects
 SUBDIRS = $(MAYBE_OSL) . doc tests
 DIST_SUBDIRS = $(MAYBE_OSL) . doc tests
 ACLOCAL_AMFLAGS = -I m4
@@ -71,16 +73,16 @@ pkginclude_HEADERS = \
 	include/clan/symbol.h
 
 # Add dependence on parser.h needed by source/scop.c
-BUILT_SOURCES = parser.h
+BUILT_SOURCES = source/parser.h
 
-AM_CPPFLAGS =  -I. -I$(top_builddir)/include -I$(top_srcdir)/include
+AM_CPPFLAGS = $(CLAN_INCLUDES)
 AM_CFLAGS = $(CFLAGS_WARN)
 AM_YFLAGS = -y -d
 
 #############################################################################
 
 libclan_la_LIBADD = @OSL_LIBS@ $(OSL_LA)
-libclan_la_CPPFLAGS = @OSL_CPPFLAGS@
+libclan_la_CPPFLAGS = @OSL_CFLAGS@ $(CLAN_INCLUDES)
 libclan_la_LDFLAGS = @OSL_LDFLAGS@
 libclan_la_SOURCES = \
 	source/parser.y \
@@ -96,8 +98,8 @@ libclan_la_SOURCES = \
 
 #############################################################################
 
-LDADD = @OSL_LIBS@ libclan.la
-clan_CPPFLAGS = @OSL_CPPFLAGS@
+LDADD = @OSL_LIBS@ $(OSL_LA) libclan.la
+clan_CPPFLAGS = @OSL_CFLAGS@ $(CLAN_INCLUDES)
 clan_DEPENDENCIES = libclan.la
 clan_SOURCES = source/clan.c
 
